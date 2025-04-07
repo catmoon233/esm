@@ -118,20 +118,44 @@ public class EntEvent {
 
     // 随机选择挑战物品的方法（可以在游戏开始时或挑战激活时调用）
     private static void selectRandomItems() {
+        Set<Item> WHITELIST = Set.of(
+                Items.APPLE,
+                Items.BREAD,
+                Items.PORKCHOP,
+                Items.COOKED_PORKCHOP,
+                Items.GOLDEN_CARROT,
+                Items.CARROT,
+                Items.POTATO,
+                Items.BAKED_POTATO,
+                Items.BEEF,
+                Items.COOKED_BEEF,
+                Items.CHICKEN,
+                Items.COOKED_CHICKEN,
+                Items.ROTTEN_FLESH,
+                Items.SPIDER_EYE,
+                Items.COD,
+                Items.COOKED_COD,
+                Items.SALMON,
+                Items.COOKED_SALMON,
+                Items.TROPICAL_FISH,
+                Items.MUTTON,
+                Items.COOKED_MUTTON,
+                Items.RABBIT,
+                Items.COOKED_RABBIT,
+                Items.EGG,
+                Items.MILK_BUCKET,
+                Items.HONEY_BOTTLE,
+                Items.MELON_SLICE,
+                Items.PUMPKIN_PIE,
+                Items.COOKIE,
+                Items.CAKE,
+                Items.BEETROOT,
+                Items.SWEET_BERRIES,
+                Items.GLOW_BERRIES
+        );
+
         // 随机食物（排除特殊物品）
-        List<Item> foods = ForgeRegistries.ITEMS.getValues().stream()
-                .filter(item -> item.isEdible() &&
-                        item != Items.ENCHANTED_GOLDEN_APPLE &&
-                        item != Items.GOLDEN_APPLE &&
-                        item != Items.MUSHROOM_STEM &&
-                        item != Items.MUSHROOM_STEW &&
-                        item != Items.BEETROOT_SOUP &&
-                        item != Items.RABBIT_STEW &&
-                        item != Items.SUSPICIOUS_STEW &&
-                        item != Items.PUFFERFISH &&
-                        item != Items.DRIED_KELP &&
-                        item != Items.CHORUS_FRUIT)
-                .toList();
+        List<Item> foods = WHITELIST.stream().toList();
         RANDOM_FOOD = foods.get(new Random().nextInt(foods.size()));
 
         // 随机可破坏方块（排除基岩等）
