@@ -78,9 +78,7 @@ public class EntEvent {
                 }
         ).toList();
         List<Item> toolItems = list.stream()
-                .filter(item -> item.getDefaultInstance().is(ItemTags.create(new ResourceLocation("forge", "tools"))))
-                .collect(Collectors.toList());
-
+                .filter(item -> item.getDefaultInstance().is(ItemTags.TOOLS)).toList();
         if (!toolItems.isEmpty()) {
             nowItem = toolItems.get(RandomSource.create().nextInt(toolItems.size()));
         } else {

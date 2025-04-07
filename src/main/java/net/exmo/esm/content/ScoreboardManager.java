@@ -19,7 +19,8 @@ public class ScoreboardManager {
         QUEST("esm_quest", "任务倒计时", ObjectiveCriteria.RenderType.INTEGER),
         QUEST_ROUND("esm_quest_round", "任务回合", ObjectiveCriteria.RenderType.INTEGER),
         DONDO_ROUND("esm_dondo_round", "禁止事件回合", ObjectiveCriteria.RenderType.INTEGER),
-        GAME_STATE("game_state", "游戏状态", ObjectiveCriteria.RenderType.INTEGER);
+        GAME_STATE("game_state", "游戏状态", ObjectiveCriteria.RenderType.INTEGER),
+        NEXT_GAME_EVENT("next_game_event", "下一个事件时间", ObjectiveCriteria.RenderType.INTEGER);
 
         final String name;
         final Component displayName;

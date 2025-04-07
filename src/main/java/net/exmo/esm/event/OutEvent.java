@@ -625,7 +625,7 @@ public class OutEvent {
 
 
         executeDontChallenge(event, (player, profiler) -> {
-            if (event.player.getYHeadRot() > 85f) {
+            if (event.player.getYHeadRot() > 120f) {
                 profiler.recordViolation("仰视天空", player);
                 event.player.setYHeadRot(80f);
 
@@ -634,7 +634,7 @@ public class OutEvent {
 
 
         executeDontChallenge(event, (player, profiler) -> {
-            if (event.player.getYHeadRot() < -85f) {
+            if (event.player.getYHeadRot() < -120f) {
                 profiler.recordViolation("俯视地面", player);
                 event.player.setYHeadRot(-80f);
             }
@@ -730,7 +730,7 @@ public class OutEvent {
             if (state.getLightEmission(event.getLevel(), event.getPos()) > 0 ||
                     state.getBlock() instanceof TorchBlock ||
                     state.is(Blocks.TORCH)) {
-                profiler.recordViolation("放置光源: " + state.getBlock().getName(), player);
+                profiler.recordViolation("放置光源: " + state.getBlock().getName().getString(), player);
                 event.setCanceled(true);
                 applyLightFearEffect(player);
             }
@@ -946,7 +946,7 @@ public class OutEvent {
                 profiler.recordViolation("尝试在狭窄的背包合成", player);
                 //event.setCanceled(true);
             if (!(event.getInventory() instanceof CraftingMenu)) {
-                player.closeContainer();
+             //   player.closeContainer();
 
                 player.displayClientMessage(
                         Component.literal("合成功能已被禁用！").withStyle(ChatFormatting.RED),
@@ -1171,7 +1171,7 @@ public class OutEvent {
 
     private static double getHeightLimit(ServerPlayer player) {
         //return player.level().getHeight() - 64.0;
-        return 100;
+        return 110;
     }
 
 

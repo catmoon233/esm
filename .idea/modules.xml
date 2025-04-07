@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/esm.main.iml" filepath="$PROJECT_DIR$/.idea/modules/esm.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/esm.test.iml" filepath="$PROJECT_DIR$/.idea/modules/esm.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/esm2.esm.test.iml" filepath="$PROJECT_DIR$/.idea/modules/esm2.esm.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/net.exmo.esm.test.iml" filepath="$PROJECT_DIR$/.idea/modules/net.exmo.esm.test.iml" />
     </modules>
   </component>

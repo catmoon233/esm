@@ -56,7 +56,7 @@ public class GameProcess {
 //    public static final int BORDER_SIZE = 320;
 
 //    public static boolean seeOnlyOneDonDo = false;
-public static boolean startFire = false;
+    public static boolean startFire = false;
     public static ServerBossEvent nextDontDo ;
     public static ServerBossEvent nextDo ;
     public static CommandSourceStack source;
@@ -97,6 +97,7 @@ public static boolean startFire = false;
 
 
     public static ServerBossEvent prepareStart ;
+    public static ServerBossEvent gameEventBossBar ;
     //玩家档案
 
     public static Map<String, PlayerGameProfiler> player_profiler = new HashMap<>();
@@ -183,8 +184,15 @@ public static boolean startFire = false;
         if (nextDo!=null){
             nextDo.setVisible(false);
         }
+        if (gameEventBossBar!=null){
+            gameEventBossBar.setVisible(false);
+        }
         setLastNextDoTime(level,DONTDOROUND.get());
         setNextQuestTime(level.getScoreboard(),NEXT_QUEST_TIME.get());
+        List<String> list = ESMGameEventHandle.events.keySet().stream().toList();
+        ESMGameEvent event= ESMGameEventHandle.events.get(list.get(level.getRandom().nextInt(ESMGameEventHandle.events.size())));
+        GameEventManager.setCurrentGameEvent(level,event.id);
+        setScore(level.getScoreboard(), "next_game_event", "system",event.time);
         nextDontDo = new ServerBossEvent(
                 Component.literal("§c下一个禁止事件 "+getLastNextDoTime(level)+"秒"),
                 ServerBossEvent.BossBarColor.RED,
@@ -193,6 +201,11 @@ public static boolean startFire = false;
         nextDo = new ServerBossEvent(
                 Component.literal("§a下一个任务 "+getNextQuestTime(level.getScoreboard())+"秒"),
                 ServerBossEvent.BossBarColor.GREEN,
+                ServerBossEvent.BossBarOverlay.PROGRESS
+        );
+        gameEventBossBar = new ServerBossEvent(
+                Component.literal("§b当前游戏事件: "+ESMGameEventHandle.findEvent(GameEventManager.getCurrentGameEvent(level)).name.getString()+" "+getScore(level.getScoreboard(), "next_game_event", "system"+"秒")),
+                ServerBossEvent.BossBarColor.BLUE,
                 ServerBossEvent.BossBarOverlay.PROGRESS
         );
         Vec3 randomPositionCenter = new Vec3(
@@ -296,6 +309,9 @@ public static boolean startFire = false;
             player.addEffect(new MobEffectInstance(MobEffects.SATURATION, 100, 10));
 
             nextDo.addPlayer(
+                    player
+            );
+            gameEventBossBar.addPlayer(
                     player
             );
             nextDontDo.addPlayer(
@@ -465,8 +481,60 @@ public static boolean startFire = false;
                             );
                             over(scoreboard); // 需要传递 ServerLevel 参数，需在方法参数中添加
                         }
-                        List<ServerPlayer> players1 = currentServer.getPlayerList().getPlayers();
+
                         ServerLevel level = event.getServer().getLevel(Level.OVERWORLD);
+                        int next_game_event_time = getScore(scoreboard, "next_game_event", "system");
+                        ESMGameEvent event1 = ESMGameEventHandle.findEvent(GameEventManager.getCurrentGameEvent(level));
+                        if (next_game_event_time>0){
+                            int cutTime = next_game_event_time - 1;
+                            setScore(scoreboard, "next_game_event", "system", cutTime);
+                            if (gameEventBossBar==null) {
+                                gameEventBossBar = new ServerBossEvent(
+                                        Component.literal("§b当前游戏事件: " + event1.name.getString() + " " + cutTime + "秒"),
+                                        ServerBossEvent.BossBarColor.BLUE,
+                                        ServerBossEvent.BossBarOverlay.PROGRESS
+                                );
+                            }
+                                gameEventBossBar.setProgress((float) cutTime / event1.time);
+                                gameEventBossBar.setName(
+                                        Component.literal("§b当前游戏事件: "+ event1.name.getString()+" "+cutTime+"秒")
+                                );
+                                players.forEach(
+                                        e -> {
+                                            gameEventBossBar.addPlayer(e);
+                                        }
+                                );
+
+
+                        }
+                        if (next_game_event_time<=0){
+                            List<String> list = ESMGameEventHandle.events.keySet().stream().toList();
+                            ESMGameEvent event2= ESMGameEventHandle.events.get(list.get(level.getRandom().nextInt(ESMGameEventHandle.events.size())));
+                            setScore(scoreboard, "next_game_event", "system", event2.time);
+                            GameEventManager.setCurrentGameEvent(level,event2.id);
+                            players.forEach(
+                                    e->{
+                                        sendTitle("§b游戏事件已更新");
+                                        e.sendSystemMessage(
+                                                Component.literal("§7------------------------")
+
+                                        );
+                                        e.sendSystemMessage(
+                                                Component.literal("§b游戏事件已更新")
+                                                        .withStyle(ChatFormatting.GOLD)
+                                        );
+                                        e.sendSystemMessage(
+                                                Component.literal("§6当前游戏事件: "+event2.name.getString()).withStyle(ChatFormatting.GOLD)
+                                        );
+                                        e.sendSystemMessage(
+                                                Component.literal("§7介绍: "+event2.describe.getString()).withStyle(ChatFormatting.GRAY)
+                                        );
+                                        e.playNotifySound(SoundEvents.ANVIL_PLACE, SoundSource.PLAYERS, 1, 1);
+
+                                    }
+                            );
+
+                        }
                         if (getLastNextDoTime(scoreboard) > 0){
                             setLastNextDoTime(scoreboard, getLastNextDoTime(scoreboard) - 1);
 
@@ -484,7 +552,7 @@ public static boolean startFire = false;
                             nextDontDo.setName(
                                     Component.literal("§7下一个禁止事件: §a" + lastNextDoTime)
                             );
-                            players1.forEach(
+                            players.forEach(
                                     e -> {
                                         nextDontDo.addPlayer(e);
                                     }
@@ -507,7 +575,7 @@ public static boolean startFire = false;
                             nextDo.setName(
                                     Component.literal("§7下一个任务: §a" + nextQuestTime +" §7当前:"+ nowQuest)
                             );
-                            players1.forEach(
+                            players.forEach(
                                     e -> {
                                         nextDo.addPlayer(e);
                                     }
