@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.exmo.esm.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "esm.refmap.json",
+  "mixins": [
+    "PlayerBuildMixin",
+    "PlayerDropMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
