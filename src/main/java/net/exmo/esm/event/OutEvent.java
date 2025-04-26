@@ -35,6 +35,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.Tags;
+import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
@@ -50,6 +51,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
+import static net.exmo.esm.content.GameChallengeHandle.*;
 
 
 @Mod.EventBusSubscriber
@@ -76,6 +78,7 @@ public class OutEvent {
 //    }
     @Mod.EventBusSubscriber
     public static class ChallengeEventHandlers {
+
     // 通用事件处理器
     private static void executeDontChallenge(EntityEvent event, BiConsumer<ServerPlayer, PlayerGameProfiler> action, GameDontDoChallenge challenge) {
         if (event.getEntity() instanceof ServerPlayer player) {
@@ -158,6 +161,18 @@ public class OutEvent {
 //        }, GameDontDoChallengeHandle.DON_JUMP);
 //    }
 
+
+
+    // 通用挑战执行方法
+    private static void executeChallenge(Event event, BiConsumer<ServerPlayer, PlayerGameProfiler> action, GameChallenge challenge) {
+        if (event instanceof EntityEvent entityEvent && entityEvent.getEntity() instanceof ServerPlayer player) {
+            PlayerGameProfiler profiler = GameProcess.getProfiler(player);
+            if (profiler.getActiveChallenge().equals(challenge.id())) {
+                action.accept(player, profiler);
+            }
+        }
+    }
+
     // 攻击生物挑战
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
@@ -168,6 +183,21 @@ public class OutEvent {
 
             event.setCanceled(true);
         }, GameDontDoChallengeHandle.DON_HURT_HOSTILE_MOBS);
+        executeDontChallenge(event, (player, profiler) -> {
+            Entity target = event.getTarget();
+            if (target instanceof LivingEntity livingEntity) {
+                if( livingEntity.getAttribute(Attributes.ATTACK_DAMAGE)==null ||livingEntity.getAttribute(Attributes.ATTACK_DAMAGE).getValue() <= 0) {
+                    String msg = "因为圣母之心而放弃了攻击 " + target.getType().getDescription().getString();
+                    profiler.recordViolation(msg, player);
+                    player.addEffect(new MobEffectInstance(MobEffects.DARKNESS));
+                    player.addEffect(new MobEffectInstance(MobEffects.HUNGER));
+                    player.hurt(new DamageSource(player.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(DamageTypes.MAGIC), player),10);
+                    event.setCanceled(true);
+                }
+            }
+
+
+        }, GameDontDoChallengeHandle.DON_HURT_FRIENDLY_MOBS);
     }
 
     // 方块破坏挑战
@@ -344,7 +374,7 @@ public class OutEvent {
         executeDontChallenge(event, (player, profiler) -> {
             if (event.getEffectInstance() != null) {
                 profiler.recordViolation("获得效果: " + event.getEffectInstance().getEffect().getDisplayName().getString(), player);
-                event.setCanceled(true);
+                player.curePotionEffects(new ItemStack(Items.MILK_BUCKET));
                 player.displayClientMessage(Component.literal("身体排斥外来物质！"), true);
             }
         }, GameDontDoChallengeHandle.DON_GET_BUFFS);
@@ -615,31 +645,29 @@ public class OutEvent {
         player.setShiftKeyDown(false);
     }
 
-    // 视角方向检测（每10 tick检测）
-    @SubscribeEvent
-    public static void onViewCheck(TickEvent.PlayerTickEvent event) {
-        if (event.phase == TickEvent.Phase.START || event.player.tickCount % 10 != 0) return;
-
-        // 垂直视角检测系统
-
-
-
-        executeDontChallenge(event, (player, profiler) -> {
-            if (event.player.getYHeadRot() > 120f) {
-                profiler.recordViolation("仰视天空", player);
-                event.player.setYHeadRot(80f);
-
-            }
-        }, GameDontDoChallengeHandle.DON_LOOK_UP);
-
-
-        executeDontChallenge(event, (player, profiler) -> {
-            if (event.player.getYHeadRot() < -120f) {
-                profiler.recordViolation("俯视地面", player);
-                event.player.setYHeadRot(-80f);
-            }
-        }, GameDontDoChallengeHandle.DON_LOOK_DOWN);
-    }
+//    // 视角方向检测（每10 tick检测）
+//    @SubscribeEvent
+//    public static void onViewCheck(TickEvent.PlayerTickEvent event) {
+//        if (event.phase == TickEvent.Phase.START || event.player.tickCount % 10 != 0) return;
+//
+//        // 垂直视角检测系统
+//        executeDontChallenge(event, (player, profiler) -> {
+//            if (event.player.getXRot() > -80) {
+//                profiler.recordViolation("仰视天空", player);
+//                event.player.setYHeadRot(80f);
+//
+//            }
+//        }, GameDontDoChallengeHandle.DON_LOOK_UP);
+//
+//
+//        executeDontChallenge(event, (player, profiler) -> {
+//
+//            if (event.player.getXRot() < 80) {
+//                profiler.recordViolation("俯视地面", player);
+//                event.player.setYHeadRot(-80f);
+//            }
+//        }, GameDontDoChallengeHandle.DON_LOOK_DOWN);
+//    }
 
     private static void adjustViewAngle(ServerPlayer player, Vec3 scale) {
         player.lookAt(EntityAnchorArgument.Anchor.EYES, player.getEyePosition(1.0f).add(scale));
@@ -675,7 +703,7 @@ public class OutEvent {
     public static void onInventoryOpen(PlayerContainerEvent.Open event) {
         executeDontChallenge(event, (player, profiler) -> {
             // 排除工作台等特殊界面
-            if (!(event.getContainer().getClass() == InventoryMenu.class)) {
+            if ((event.getContainer().getClass() == InventoryMenu.class)) {
                 profiler.recordViolation("打开背包", player);
                 player.closeContainer();
 
@@ -935,7 +963,7 @@ public class OutEvent {
                 .filter(stack -> !stack.isEmpty())
                 .count();
         // 总格子数减去快捷栏保留的9格
-        return usedSlots >= (inventory.getContainerSize() - 18);
+        return usedSlots >= (inventory.getContainerSize() - 9);
     }
 
 

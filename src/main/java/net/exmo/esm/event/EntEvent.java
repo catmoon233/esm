@@ -8,18 +8,18 @@ import net.exmo.esm.content.*;
 import net.exmo.esm.content.GameProcess;
 import net.exmo.esm.content.PlayerGameProfiler;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.horse.Horse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.*;
@@ -27,12 +27,14 @@ import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.NetherPortalBlock;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.Tags;
+import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
@@ -51,10 +53,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 import static net.exmo.esm.content.GameChallengeHandle.*;
+
 
 
 @Mod.EventBusSubscriber
@@ -62,6 +65,7 @@ public class EntEvent {
     private static  Item nowItem = Items.AIR;
     @SubscribeEvent
     public static void randomEventUp(QuestUpdateEvent event){
+
         List<Item> list = ForgeRegistries.ITEMS.getValues().stream().filter(
                 item -> {
                     return item != Items.COMMAND_BLOCK &&
@@ -98,6 +102,48 @@ public class EntEvent {
         if (Objects.equals(GameProcess.nowQuest, RANDOM_ITEMS.name.getString())){
             GameProcess.nowQuest = GameProcess.nowQuest+" : "+nowItem.getDescription().getString();
         }
+        if (Objects.equals(GameProcess.nowQuest, RIDE_HOUSE.name.getString())) {
+            // 用于存储所有有效玩家的位置总和
+            AtomicReference<Double> totalX = new AtomicReference<>((double) 0);
+            AtomicReference<Double> totalY = new AtomicReference<>((double) 0);
+            AtomicReference<Double> totalZ = new AtomicReference<>((double) 0);
+            AtomicInteger validPlayerCount = new AtomicInteger();
+
+            GameProcess.currentServer.getPlayerList().getPlayers().forEach(player -> {
+                // 检查玩家是否符合条件（例如生命值大于0）
+                if (PlayerGameProfiler.getHealth(event.scoreboard, player.getScoreboardName()) > 0) {
+                    Vec3 playerPos = player.position();
+                    totalX.updateAndGet(v -> new Double((double) (v + playerPos.x)));
+                    totalY.updateAndGet(v -> new Double((double) (v + playerPos.y)));
+                    totalZ.updateAndGet(v -> new Double((double) (v + playerPos.z)));
+                    validPlayerCount.getAndIncrement();
+                }
+            });
+
+            // 计算中心位置
+            if (validPlayerCount.get() > 0) {
+                Vec3 centerPos = new Vec3(
+                        totalX.get() / validPlayerCount.get(),
+                        totalY.get() / validPlayerCount.get(),
+                        totalZ.get() / validPlayerCount.get()
+                );
+                // 在此处使用 centerPos，例如召唤实体到该位置
+                ServerLevel level = GameProcess.currentServer.getLevel(Level.OVERWORLD);
+                Horse horse = new Horse(EntityType.HORSE, level);
+                horse.moveTo(centerPos.x,level.getHeight(
+                        Heightmap.Types.MOTION_BLOCKING,
+                        (int) centerPos.x,
+                        (int) centerPos.z
+                ) , centerPos.z, 0, 0);
+                horse.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 1000000,10));
+                horse.setGlowingTag(true);
+                level.addFreshEntity(horse);
+                System.out.println("玩家中心位置: " + centerPos);
+            } else {
+                System.out.println("没有符合条件的玩家");
+            }
+        }
+
     }
     @SubscribeEvent
     public static void equipmentChange(LivingEquipmentChangeEvent event){
@@ -201,6 +247,9 @@ public class EntEvent {
         POSITION_HISTORY.clear();
         SATURATION_CACHE.clear();
         positionHistory.clear();
+        ChallengeEventHandlers.LAST_POSITIONS2.clear();
+        ChallengeEventHandlers.CHAT_COUNTER.clear();
+        ChallengeEventHandlers.REQUIRED_MESSAGES.clear();
 
     }
 
@@ -322,6 +371,14 @@ public class EntEvent {
 
 
             }
+        }
+        private static void executeChallenge(ServerChatEvent event, BiConsumer<ServerPlayer, PlayerGameProfiler> action, GameChallenge challenge) {
+            ServerPlayer player = event.getPlayer();
+            PlayerGameProfiler profiler = GameProcess.getProfiler(player);
+                if (profiler.getActiveChallenge().equals(challenge.id())) {
+                    action.accept(player, profiler);
+                }
+
         }
 
         private static void executeChallenge(TickEvent.PlayerTickEvent event, BiConsumer<ServerPlayer, PlayerGameProfiler> action, GameChallenge challenge) {
@@ -525,6 +582,103 @@ public class EntEvent {
             } catch (ExecutionException e) {
                 return false;
             }
+        }
+        public static final Map<UUID, Vec3> LAST_POSITIONS2 = new HashMap<>();
+        public static final Map<UUID, Integer> CHAT_COUNTER = new HashMap<>();
+        public static final Map<UUID, Set<String>> REQUIRED_MESSAGES = new HashMap<>();
+
+        // 注册所有事件监听
+
+        // 辅助方法：判断是否向前移动
+        private static boolean isMovingForward(Player player, Vec3 currentPos, Vec3 lastPos) {
+            Vec3 delta = currentPos.subtract(lastPos);
+            Vec3 lookVec = player.getLookAngle();
+            return delta.dot(lookVec) > 0; // 移动方向与视角方向夹角小于90度
+        }
+
+        // 移动类挑战检测
+        @SubscribeEvent
+        public static void onMovementChallenge2(TickEvent.PlayerTickEvent event) {
+            if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer)) return;
+            if (event.player.tickCount % 20 != 0) return;
+
+            executeChallenge(event, (player, profiler) -> {
+                Vec3 currentPos = player.position();
+                Vec3 lastPos = LAST_POSITIONS2.getOrDefault(player.getUUID(), currentPos);
+
+                // 向前移动检测（CHALLENGE_AS）
+                if (profiler.getActiveChallenge().equals(CHALLENGE_AS.id())) {
+                    double distance = Math.sqrt(currentPos.distanceToSqr(lastPos));
+                    if (distance > 0.1 && isMovingForward(player, currentPos, lastPos)) {
+                        profiler.addProgress("movement", distance);
+                        if (profiler.getProgress("movement") >= 100) {
+                            profiler.finishQuest("传奇耐跑王", player);
+                        }
+                    }
+                }
+                LAST_POSITIONS2.put(player.getUUID(), currentPos);
+            }, CHALLENGE_AS);
+        }
+
+        // 击杀挑战检测（CHALLENGE_AC）
+        @SubscribeEvent
+        public static void onKillChallenge(LivingDeathEvent event) {
+            if (event.getSource().getEntity() instanceof ServerPlayer player) {
+                executeChallenge(event, (p, profiler) -> {
+                    profiler.addProgress("kills", 1);
+                    if (profiler.getProgress("kills") >= 3) {
+                        profiler.finishQuest("死亡之歌", player);
+                    }
+                }, CHALLENGE_AC);
+            }
+        }
+
+        // 死亡挑战检测（CHALLENGE_AF）
+        @SubscribeEvent
+        public static void onDeathChallenge(LivingDeathEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                executeChallenge(event, (p, profiler) -> {
+                    profiler.finishQuest("似了", player); // 直接完成挑战
+                }, CHALLENGE_AF);
+            }
+        }
+
+        // 聊天挑战检测（CHALLENGE_AG & CHALLENGE_AR & CHALLENGE_CY_TY_ZZ_YX_DD_CC）
+        @SubscribeEvent
+        public static void onChatChallenge(ServerChatEvent event) {
+            ServerPlayer player = event.getPlayer();
+            String message = event.getRawText();
+
+            // 通用发言计数器（CHALLENGE_AG）
+            executeChallenge(event, (p, profiler) -> {
+                int count = CHAT_COUNTER.getOrDefault(p.getUUID(), 0) + 1;
+                CHAT_COUNTER.put(p.getUUID(), count);
+                if (count >= 20) {
+                    profiler.finishQuest("口若悬河", player);
+                }
+            }, CHALLENGE_AG);
+
+            // 特定短语检测（CHALLENGE_AR）
+            if (message.contains("阿姆斯特朗回旋加速喷气式阿姆斯特朗炮")) {
+                executeChallenge(event, (p, profiler) -> profiler.finishQuest("啊米诺斯", player), CHALLENGE_AR);
+            }
+
+            // 多选短语检测（CHALLENGE_CY_TY_ZZ_YX_DD_CC）
+            Set<String> required = REQUIRED_MESSAGES.computeIfAbsent(player.getUUID(), k ->
+                    Set.of("残月美貌无双", "天衣沉鱼落雁", "早早是大铸币", "你们都是大铸币"));
+            if (required.stream().anyMatch(message::contains)) {
+                executeChallenge(event, (p, profiler) -> profiler.finishQuest("小嘴真甜", player), CHALLENGE_CY_TY_ZZ_YX_DD_CC);
+            }
+        }
+
+        // 一击必杀检测（CHALLENGE_AH）
+        @SubscribeEvent
+        public static void onCriticalHitChallenge(LivingHurtEvent event) {
+                if (event.getAmount() >= event.getEntity().getHealth()) {
+                    executeChallenge(event, (p, profiler) -> {
+                        profiler.finishQuest("一击必杀", p);
+                    }, CHALLENGE_AH);
+                }
         }
         // ================== 钻石检测 ================== //
         private static final Map<UUID, Boolean> DIAMOND_CACHE = new ConcurrentHashMap<>();
@@ -1423,7 +1577,7 @@ public class EntEvent {
         if (event.player.tickCount % 10 != 0) return; // 0.5秒检测间隔
 
         executeChallenge(event, (player, profiler) -> {
-            boolean isHigh = player.getY() > 120.0;
+            boolean isHigh = player.getY() > 100;
             Boolean cached = ALTITUDE_CACHE.get(player.getUUID());
 
             if (cached != null && cached == isHigh) {

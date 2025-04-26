@@ -17,7 +17,7 @@ public class GameDontDoChallengeHandle {
             .name("脆骨症").describe("不能受到任何伤害");
     //禁止受到伤害
     public static GameDontDoChallenge DON_HURT_FRIENDLY_MOBS = new GameDontDoChallenge("DON_HURT_FRIENDLY_MOBS")
-            .name("圣母之心").describe("不能攻击友善生物");
+            .name("圣母之心").describe("不能攻击友善动物");
     //禁止攻击友善生物
     public static GameDontDoChallenge DON_HURT_HOSTILE_MOBS = new GameDontDoChallenge("DON_HURT_HOSTILE_MOBS")
             .name("战斗狂魔").describe("不能攻击非友善生物");
@@ -80,12 +80,12 @@ public class GameDontDoChallengeHandle {
     //禁止使用盾牌格挡
     public static GameDontDoChallenge DON_SNEAK = new GameDontDoChallenge("DON_SNEAK")
             .name("潜行-100级").describe("不能潜行");
-    //禁止潜行
-    public static GameDontDoChallenge DON_LOOK_UP = new GameDontDoChallenge("DON_LOOK_UP")
-            .name("不要抬头").describe("不能看向天空（视角朝向天空）");
-    //禁止看向天空（视角朝向天空）
-    public static GameDontDoChallenge DON_LOOK_DOWN = new GameDontDoChallenge("DON_LOOK_DOWN")
-            .name("不要低头").describe("不能看向地板（视角朝向底部）");
+//    //禁止潜行
+//    public static GameDontDoChallenge DON_LOOK_UP = new GameDontDoChallenge("DON_LOOK_UP")
+//            .name("不要抬头").describe("不能看向天空（视角朝向天空）");
+//    //禁止看向天空（视角朝向天空）
+//    public static GameDontDoChallenge DON_LOOK_DOWN = new GameDontDoChallenge("DON_LOOK_DOWN")
+//            .name("不要低头").describe("不能看向地板（视角朝向底部）");
     //禁止看向地板（视角朝向底部）
     public static GameDontDoChallenge DON_GET_RAINED = new GameDontDoChallenge("DON_GET_RAINED")
             .name("避水").describe("不能淋雨");

@@ -16,9 +16,10 @@ public class GameChallenge {
                 id,this
         );
     }
+    public int time =GameConfig.NEXT_QUEST_TIME.get();
     public Component name;
     public Component describe;
-
+    public float weight =10f;
     public GameChallenge name(String s){
         name = Component.literal(s);
 
@@ -47,5 +48,13 @@ public class GameChallenge {
 
     public String id() {
         return  id;
+    }
+    public GameChallenge time(int time) {
+        this.time = time;
+        return this;
+    }
+    public GameChallenge weight(float weight) {
+        this.weight = weight;
+        return this;
     }
 }

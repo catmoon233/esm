@@ -50,6 +50,7 @@ import static net.exmo.esm.content.GameConfig.*;
 import static net.exmo.esm.content.ScoreboardManager.*;
 
 public class GameProcess {
+    public static final String fen_ge_xian = "§7------------------------";
 //    public static final int MAX_HEALTH = 30;
 //    public static final int DONTDOROUND = 88;
 //    public static final int NEXT_QUEST_TIME = 68;
@@ -61,6 +62,7 @@ public class GameProcess {
     public static ServerBossEvent nextDo ;
     public static CommandSourceStack source;
     public static String nowQuest ="";
+    public static String nowQuestID ="";
 
 //    public static int getLastNextDoTime(Level level){
 //        return level.getScoreboard().getOrCreatePlayerScore("system", Objects.requireNonNull(level.getScoreboard().getObjective("esm_dontdo"))).getScore();
@@ -172,6 +174,12 @@ public class GameProcess {
         scoreboard.addPlayerTeam("r6").setColor(ChatFormatting.GOLD);
         scoreboard.addPlayerTeam("r7").setColor(ChatFormatting.LIGHT_PURPLE);
         scoreboard.addPlayerTeam("r8").setColor(ChatFormatting.WHITE);
+//        scoreboard.getPlayerTeams().forEach(team -> {
+//            team.getPlayers().forEach(player -> {
+//                scoreboard.removePlayerFromTeam(player, team);
+//            });
+//        });
+
 
         setQuestRound(scoreboard,0);
         setDondoRound(scoreboard,0);
@@ -187,24 +195,26 @@ public class GameProcess {
         if (gameEventBossBar!=null){
             gameEventBossBar.setVisible(false);
         }
-        setLastNextDoTime(level,DONTDOROUND.get());
-        setNextQuestTime(level.getScoreboard(),NEXT_QUEST_TIME.get());
-        List<String> list = ESMGameEventHandle.events.keySet().stream().toList();
-        ESMGameEvent event= ESMGameEventHandle.events.get(list.get(level.getRandom().nextInt(ESMGameEventHandle.events.size())));
+
+        WeightedUtil<ESMGameEvent<?>> esmGameEventWeightedUtil = new WeightedUtil<>(ESMGameEventHandle.events.values().stream().map(challenge -> Map.entry(challenge, challenge.weight)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        ESMGameEvent<?> event= esmGameEventWeightedUtil.selectRandomKeyBasedOnWeights();
+        EsmGameChangeEvent event2 = new EsmGameChangeEvent(level, event);
+        MinecraftForge.EVENT_BUS.post(event2);
+        sendEsmGameInfo(level.players(),event,false);
         GameEventManager.setCurrentGameEvent(level,event.id);
         setScore(level.getScoreboard(), "next_game_event", "system",event.time);
         nextDontDo = new ServerBossEvent(
-                Component.literal("§c下一个禁止事件 "+getLastNextDoTime(level)+"秒"),
+                Component.literal("§c下一个禁止事件qwq "+getLastNextDoTime(level)+"秒"),
                 ServerBossEvent.BossBarColor.RED,
                 ServerBossEvent.BossBarOverlay.PROGRESS
         );
         nextDo = new ServerBossEvent(
-                Component.literal("§a下一个任务 "+getNextQuestTime(level.getScoreboard())+"秒"),
+                Component.literal("§a下一个任务OvO "+getNextQuestTime(level.getScoreboard())+"秒"),
                 ServerBossEvent.BossBarColor.GREEN,
                 ServerBossEvent.BossBarOverlay.PROGRESS
         );
         gameEventBossBar = new ServerBossEvent(
-                Component.literal("§b当前游戏事件: "+ESMGameEventHandle.findEvent(GameEventManager.getCurrentGameEvent(level)).name.getString()+" "+getScore(level.getScoreboard(), "next_game_event", "system"+"秒")),
+                Component.literal("§b当前游戏事件awa: "+ESMGameEventHandle.findEvent(GameEventManager.getCurrentGameEvent(level)).name.getString()+" "+getScore(level.getScoreboard(), "next_game_event", "system"+"秒")),
                 ServerBossEvent.BossBarColor.BLUE,
                 ServerBossEvent.BossBarOverlay.PROGRESS
         );
@@ -238,11 +248,14 @@ public class GameProcess {
         level.setDayTime(1000);
 
         level.getWorldBorder().setDamagePerBlock(2);
-        currentServer.getCommands().performPrefixedCommand(source,"title @a title \"\\u00a7a游戏开始\" ");
+        currentServer.getCommands().performPrefixedCommand(source,"title @a title \"\\u00a7a游戏开始啦！\" ");
 
-        var strings = GameChallengeHandle.challenges.keySet().stream().filter(e-> !Objects.equals(e, "NONE")).toList();
-        var challenge = strings.get(new Random().nextInt(strings.size()));
-        nowQuest = GameChallengeHandle.challenges.get(challenge).name.getString();
+        WeightedUtil<GameChallenge> gameChallengeWeightedUtil = new WeightedUtil<>(GameChallengeHandle.challenges.values().stream().map(challenge -> Map.entry(challenge, challenge.weight)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        var challenge = gameChallengeWeightedUtil.selectRandomKeyBasedOnWeights();
+        nowQuest = GameChallengeHandle.challenges.get(challenge.id).name.getString();
+        nowQuestID = GameChallengeHandle.challenges.get(challenge.id).id;
+        setLastNextDoTime(level,DONTDOROUND.get());
+        setNextQuestTime(level.getScoreboard(),challenge.time);
 
         // 在 GameProcess.java 的 start 方法中添加以下代码（在创建队伍之后，玩家初始化之前）
         List<ServerPlayer> allPlayers = new ArrayList<>(level.players());
@@ -298,7 +311,7 @@ public class GameProcess {
             PlayerTeam playersTeam = scoreboard.getPlayersTeam(player.getScoreboardName());
             if (playersTeam != null){
             player.displayClientMessage(
-                    Component.literal("§a你的队友：")
+                    Component.literal("§a你的铸币队友：")
                             .append(getTeamMembersList(scoreboard, playersTeam.getName()))
                             .withStyle(ChatFormatting.BOLD),
                     false);
@@ -359,7 +372,7 @@ public class GameProcess {
           PlayerGameProfiler.setHealth(MAX_HEALTH.get(),level.getScoreboard(),player.getScoreboardName());
 
           changeDontChallenge(player);
-          changeQuestChallenge(player,challenge);
+          changeQuestChallenge(player,challenge.id);
 
 
 
@@ -404,12 +417,12 @@ public class GameProcess {
 
 
             player.sendSystemMessage(
-                  Component.literal("§7游戏结束")
+                  Component.literal("§7游戏结束啦！")
                               .withStyle(style ->
                                       style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("§7等待下一个游戏开启")))
                               )
           );
-            sendTitle("§4游戏结束");
+            sendTitle("§4游戏结束啦！");
         });
         ScoreboardManager.setScore(scoreboard, "game_state", "system",GameState.PREPARE.anInt);
 
@@ -441,9 +454,7 @@ public class GameProcess {
         public static void ServerTick(TickEvent.ServerTickEvent event){
             if (event.phase == TickEvent.Phase.END) {
                 ServerScoreboard scoreboard = event.getServer().getScoreboard();
-                event.getServer().getFunctions().get(ResourceLocation.parse("esm:tick")).ifPresent(commandFunction -> {
-                    event.getServer().getFunctions().execute(commandFunction, event.getServer().createCommandSourceStack().withSuppressedOutput().withPermission(4));
-                });
+                event.getServer().getFunctions().get(ResourceLocation.parse("esm:tick")).ifPresent(commandFunction -> event.getServer().getFunctions().execute(commandFunction, event.getServer().createCommandSourceStack().withSuppressedOutput().withPermission(4)));
                 if (currentServer==null)currentServer = ServerLifecycleHooks.getCurrentServer();
                 List<ServerPlayer> players = event.getServer().getPlayerList().getPlayers();
 
@@ -451,10 +462,8 @@ public class GameProcess {
                 if (tick % 20 == 0) {
                     if (ScoreboardManager.getScore(scoreboard, "game_state", "system") == GameState.PREPARE.anInt){
                         if (startDownTime==10){
-                            prepareStart = new ServerBossEvent(Component.literal("游戏即将开始"), ServerBossEvent.BossBarColor.GREEN, ServerBossEvent.BossBarOverlay.PROGRESS);
-                            players.forEach(e -> {
-                                prepareStart.addPlayer(e);
-                            });
+                            prepareStart = new ServerBossEvent(Component.literal("游戏即将开始喽！"), ServerBossEvent.BossBarColor.GREEN, ServerBossEvent.BossBarOverlay.PROGRESS);
+                            players.forEach(e -> prepareStart.addPlayer(e));
                             prepareStart.setVisible(true);
                         }
                         if (startDownTime >1) {
@@ -484,7 +493,9 @@ public class GameProcess {
 
                         ServerLevel level = event.getServer().getLevel(Level.OVERWORLD);
                         int next_game_event_time = getScore(scoreboard, "next_game_event", "system");
-                        ESMGameEvent event1 = ESMGameEventHandle.findEvent(GameEventManager.getCurrentGameEvent(level));
+                        ESMGameEvent<?> event1 = ESMGameEventHandle.findEvent(GameEventManager.getCurrentGameEvent(level));
+                        EsmGameChangeEvent eventA = new EsmGameChangeEvent(level, event1);
+                        MinecraftForge.EVENT_BUS.post(eventA);
                         if (next_game_event_time>0){
                             int cutTime = next_game_event_time - 1;
                             setScore(scoreboard, "next_game_event", "system", cutTime);
@@ -500,39 +511,17 @@ public class GameProcess {
                                         Component.literal("§b当前游戏事件: "+ event1.name.getString()+" "+cutTime+"秒")
                                 );
                                 players.forEach(
-                                        e -> {
-                                            gameEventBossBar.addPlayer(e);
-                                        }
+                                        e -> gameEventBossBar.addPlayer(e)
                                 );
 
 
                         }
                         if (next_game_event_time<=0){
-                            List<String> list = ESMGameEventHandle.events.keySet().stream().toList();
-                            ESMGameEvent event2= ESMGameEventHandle.events.get(list.get(level.getRandom().nextInt(ESMGameEventHandle.events.size())));
+                            WeightedUtil<ESMGameEvent<?>> esmGameEventWeightedUtil = new WeightedUtil<>(ESMGameEventHandle.events.values().stream().map(challenge -> Map.entry(challenge, challenge.weight)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                            ESMGameEvent<?> event2= esmGameEventWeightedUtil.selectRandomKeyBasedOnWeights();
                             setScore(scoreboard, "next_game_event", "system", event2.time);
                             GameEventManager.setCurrentGameEvent(level,event2.id);
-                            players.forEach(
-                                    e->{
-                                        sendTitle("§b游戏事件已更新");
-                                        e.sendSystemMessage(
-                                                Component.literal("§7------------------------")
-
-                                        );
-                                        e.sendSystemMessage(
-                                                Component.literal("§b游戏事件已更新")
-                                                        .withStyle(ChatFormatting.GOLD)
-                                        );
-                                        e.sendSystemMessage(
-                                                Component.literal("§6当前游戏事件: "+event2.name.getString()).withStyle(ChatFormatting.GOLD)
-                                        );
-                                        e.sendSystemMessage(
-                                                Component.literal("§7介绍: "+event2.describe.getString()).withStyle(ChatFormatting.GRAY)
-                                        );
-                                        e.playNotifySound(SoundEvents.ANVIL_PLACE, SoundSource.PLAYERS, 1, 1);
-
-                                    }
-                            );
+                            sendEsmGameInfo(players, event2,true);
 
                         }
                         if (getLastNextDoTime(scoreboard) > 0){
@@ -553,9 +542,7 @@ public class GameProcess {
                                     Component.literal("§7下一个禁止事件: §a" + lastNextDoTime)
                             );
                             players.forEach(
-                                    e -> {
-                                        nextDontDo.addPlayer(e);
-                                    }
+                                    e -> nextDontDo.addPlayer(e)
                             );
                         }
                         if (getNextQuestTime(scoreboard) > 0){
@@ -570,15 +557,19 @@ public class GameProcess {
                                 );
 
                             }
-                            nextDo.setProgress((float) nextQuestTime /NEXT_QUEST_TIME.get());
+                            GameChallenge challenge = GameChallengeHandle.getChallenge(nowQuestID);
+
+                            int maxTime = NEXT_QUEST_TIME.get();
+                            if (challenge!=null){
+                                maxTime =challenge.time;
+                            }
+                            nextDo.setProgress((float) nextQuestTime / maxTime);
 
                             nextDo.setName(
                                     Component.literal("§7下一个任务: §a" + nextQuestTime +" §7当前:"+ nowQuest)
                             );
                             players.forEach(
-                                    e -> {
-                                        nextDo.addPlayer(e);
-                                    }
+                                    e -> nextDo.addPlayer(e)
                             );
                         }
                         if (getLastNextDoTime(scoreboard) <= 0){
@@ -603,6 +594,7 @@ public class GameProcess {
 
                                     }
                             );
+
                             playerTell.clear();
                             displayOtherPeopleInfo(true,false);
                             playerTell.clear();
@@ -614,21 +606,20 @@ public class GameProcess {
                                     scoreboard,
                                     getQuestRound(scoreboard)+1
                             );
-                            setNextQuestTime(scoreboard, NEXT_QUEST_TIME.get());
-                            var strings = GameChallengeHandle.challenges.keySet().stream().filter(e-> !Objects.equals(e, "NONE")).toList();
-                            var challenge = strings.get(new Random().nextInt(strings.size()));
+                            WeightedUtil<GameChallenge> gameChallengeWeightedUtil = new WeightedUtil<>(GameChallengeHandle.challenges.values().stream().map(challenge -> Map.entry(challenge, challenge.weight)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                            var challenge = gameChallengeWeightedUtil.selectRandomKeyBasedOnWeights();
+                            setNextQuestTime(scoreboard, GameChallengeHandle.getChallenge(challenge.id).time);
                             players.forEach(
-                                    e->{
-                                        e.sendSystemMessage(Component.literal(
-                                                "§7------------------------"
-                                        ));
-                                    }
+                                    e-> e.sendSystemMessage(Component.literal(
+                                            "§7------------------------"
+                                    ))
                             );
                             List<String> finishQuest= new ArrayList<>();
                             List<String> failQuest= new ArrayList<>();
                             sendTitle("§a任务事件已更新");
                             players.forEach(
                                     e->{
+                                        e.curePotionEffects(new ItemStack(Items.MILK_BUCKET));
 
                                         PlayerGameProfiler profiler = getProfiler(e);
                                         e.sendSystemMessage(
@@ -644,7 +635,7 @@ public class GameProcess {
                                             } else {
                                                 finishQuest.add(e.getScoreboardName());
                                             }
-                                            changeQuestChallenge(e, challenge);
+                                            changeQuestChallenge(e, challenge.id);
                                         }
                                     }
                             );
@@ -658,7 +649,8 @@ public class GameProcess {
 
 
                             );
-                            nowQuest = GameChallengeHandle.challenges.get(challenge).name.getString();
+                            nowQuest = GameChallengeHandle.challenges.get(challenge.id).name.getString();
+                            nowQuestID = GameChallengeHandle.challenges.get(challenge.id).id;
                             MinecraftForge.EVENT_BUS.post(new QuestUpdateEvent(scoreboard));
                             playerTell.clear();
                             displayOtherPeopleInfo(false,true);
@@ -672,13 +664,13 @@ public class GameProcess {
                                             Component.literal("§7------------------------")
                                     );
                                     e.sendSystemMessage(
-                                            Component.literal("§4战斗开始")
+                                            Component.literal("§4战斗开始啦")
                                     );
                                     e.sendSystemMessage(
-                                            Component.literal("§6每死亡一次 扣三点点数")
+                                            Component.literal("§6每死亡一次 扣三点点数！")
                                     );
                                     e.sendSystemMessage(
-                                            Component.literal("§6边界开始缩小")
+                                            Component.literal("§6边界开始缩小啦！")
                                     );
                                     WorldBorder worldBorder = level.getWorldBorder();
 
@@ -730,7 +722,7 @@ public class GameProcess {
                         return displayName;
 
                     })
-                    .orElse(Component.literal("无人幸存"));
+                    .orElse(Component.literal("无人幸存！"));
         }
 
         public static void serverLoad() {
@@ -767,6 +759,32 @@ public class GameProcess {
 
     }
 }
+
+    private static void sendEsmGameInfo(List<ServerPlayer> players, ESMGameEvent<?> event2,boolean title) {
+        players.forEach(
+                e->{
+                    if (title) {
+                        sendTitle("§b游戏事件已更新啦");
+                    }
+                    e.sendSystemMessage(
+                            Component.literal("§7------------------------")
+
+                    );
+                    e.sendSystemMessage(
+                            Component.literal("§b游戏事件已更新啦")
+                                    .withStyle(ChatFormatting.GOLD)
+                    );
+                    e.sendSystemMessage(
+                            Component.literal("§6当前游戏事件: "+ event2.name.getString()).withStyle(ChatFormatting.GOLD)
+                    );
+                    e.sendSystemMessage(
+                            Component.literal("§7介绍: "+ event2.describe.getString()).withStyle(ChatFormatting.GRAY)
+                    );
+                    e.playNotifySound(SoundEvents.ANVIL_PLACE, SoundSource.PLAYERS, 1, 1);
+
+                }
+        );
+    }
 
     private static @Nullable MutableComponent getPlayerTeamColor(String string) {
         switch (string) {
@@ -888,8 +906,8 @@ private static final List<ServerPlayer> playerTell = new ArrayList<>();
         PlayerGameProfiler profiler = getProfiler(e);
         if (profiler.gameOver)return;
         profiler.failRule =false;
-        var strings = GameDontDoChallengeHandle.challenges.keySet().stream().filter(a -> !Objects.equals(a, GameDontDoChallengeHandle.NONE.id)).toList();
-        profiler.dontDoChallenge = strings.get(new Random().nextInt(strings.size()));
+        WeightedUtil<GameDontDoChallenge> gameDontDoChallengeWeightedUtil = new WeightedUtil<>(GameDontDoChallengeHandle.challenges.values().stream().filter(A-> !Objects.equals(A.id, "NONE")).map(challenge -> Map.entry(challenge, challenge.weight)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        profiler.dontDoChallenge = gameDontDoChallengeWeightedUtil.selectRandomKeyBasedOnWeights().id;
         PlayerNBTManager.saveToNBT(
                 e,
                 profiler

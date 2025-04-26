@@ -13,7 +13,7 @@ public class GameDontDoChallenge {
     public String id;
     public Component name;
     public Component describe;
-
+    public float weight=10f;
     public GameDontDoChallenge(String id) {
         this.id = id;
         GameDontDoChallengeHandle.challenges.put(
@@ -35,7 +35,10 @@ public class GameDontDoChallenge {
 
 
 
-
+    public GameDontDoChallenge weight(float weight){
+        this.weight = weight;
+        return this;
+    }
     public void fail(Component component, ServerPlayer player){
         PlayerGameProfiler profiler = GameProcess.getProfiler(player);
         if (!profiler.failRule) {
@@ -59,6 +62,7 @@ public class GameDontDoChallenge {
                     }
             );
             profiler.failRule = true;
+
         }
 
     }

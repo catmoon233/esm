@@ -5,8 +5,10 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "esm.refmap.json",
   "mixins": [
+    "ItemStackUseMixin",
     "PlayerBuildMixin",
-    "PlayerDropMixin"
+    "PlayerDropMixin",
+    "PlayerJumpMixin"
   ],
   "client": [
   ],

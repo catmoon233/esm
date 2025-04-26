@@ -8,6 +8,8 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class PlayerGameProfiler {
@@ -112,5 +114,16 @@ public class PlayerGameProfiler {
             }
         }
 
+    }
+    public Map<String,Double> progress = new HashMap<>();
+    public Map<String,Double> getProgress() {
+        return progress;
+    }
+    public double getProgress(String s) {
+        return progress.getOrDefault(s,0d);
+    }
+
+    public void addProgress(String p, double i) {
+        progress.put(p,progress.getOrDefault(p,0d)+i);
     }
 }
