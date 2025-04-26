@@ -11,7 +11,7 @@ public class GameDontDoChallengeHandle {
             .name("无").describe("故障时使用");
     //禁止玩家跳跃
     public static GameDontDoChallenge DON_USE_WORK_BLOCKS = new GameDontDoChallenge("DON_USE_WORK_BLOCKS")
-            .name("不！许！用！").describe("不能使用工作方块");
+            .name("不！许！用！").describe("不能使用工作方块").weight(8f);
     //禁止使用工作方块
     public static GameDontDoChallenge DON_TAKE_DAMAGE = new GameDontDoChallenge("DON_TAKE_DAMAGE")
             .name("脆骨症").describe("不能受到任何伤害");
@@ -23,10 +23,10 @@ public class GameDontDoChallengeHandle {
             .name("战斗狂魔").describe("不能攻击非友善生物");
     //禁止攻击非友善生物
     public static GameDontDoChallenge DON_PUNCH_BLOCKS = new GameDontDoChallenge("DON_PUNCH_BLOCKS")
-            .name("无力症").describe("不能撸方块");
+            .name("无力症").describe("不能撸方块").weight(8f);
     //禁止撸方块
     public static GameDontDoChallenge DON_USE_TOOLS = new GameDontDoChallenge("DON_USE_TOOLS")
-            .name("有气无力症").describe("不能使用工具");
+            .name("有气无力症").describe("不能使用工具").weight(8f);
     //禁止使用工具
     public static GameDontDoChallenge DON_EAT_MEAT = new GameDontDoChallenge("DON_EAT_MEAT")
             .name("素食者").describe("不能食用肉类食物");
@@ -35,7 +35,7 @@ public class GameDontDoChallengeHandle {
 //            .name("肉食者").describe("");
     //禁止使用素类食物
     public static GameDontDoChallenge DON_GET_BUFFS = new GameDontDoChallenge("DON_GET_BUFFS")
-            .name("高敏体").describe("不能获得任意buff");
+            .name("高敏体").describe("不能获得任意buff").weight(12f);
     //禁止获得任意buff
     public static GameDontDoChallenge DON_ATTACK_PLAYERS = new GameDontDoChallenge("DON_ATTACK_PLAYERS")
             .name("诚信").describe("不能攻击玩家");
@@ -71,7 +71,7 @@ public class GameDontDoChallengeHandle {
 //            .name("我不放！").describe("不能放置完整方块（半砖除外）");
     //禁止放置完整方块（半砖除外）
     public static GameDontDoChallenge DON_WEAR_ARMOR = new GameDontDoChallenge("DON_WEAR_ARMOR")
-            .name("自信").describe("不能穿戴护甲");
+            .name("自信").describe("不能穿戴护甲").weight(8f);
     public static GameDontDoChallenge DONT_HAND_ITEM = new GameDontDoChallenge("DON_WEAR_ARMOR")
             .name("手无寸铁").describe("副手不能拿东西");
     //禁止穿戴护甲
@@ -91,13 +91,13 @@ public class GameDontDoChallengeHandle {
             .name("避水").describe("不能淋雨");
     //禁止淋雨（但每天会50%的概率降雨）
     public static GameDontDoChallenge DON_OPEN_INVENTORY = new GameDontDoChallenge("DON_OPEN_INVENTORY")
-            .name("我的手足以").describe("不能使用背包（仅限于玩家自主打开，工作方块界面等除外）");
+            .name("我的手足以").describe("不能使用背包（仅限于玩家自主打开，工作方块界面等除外）").weight(8f);
     //禁止使用背包（仅限于玩家自主打开，工作方块界面等除外）
     public static GameDontDoChallenge DON_DROP_ITEMS = new GameDontDoChallenge("DON_DROP_ITEMS")
             .name("不给不给！").describe("不能丢出物品");
     //禁止丢出物品
     public static GameDontDoChallenge DON_USE_CONTAINERS = new GameDontDoChallenge("DON_USE_CONTAINERS")
-            .name("我的背包足够大！").describe("不能使用容器");
+            .name("我的背包足够大！").describe("不能使用容器").weight(8f);
     //禁止使用容器
     public static GameDontDoChallenge DON_PLACE_LIGHT = new GameDontDoChallenge("DON_PLACE_LIGHT")
             .name("惧光者").describe("不能使用光源");
@@ -137,7 +137,7 @@ public class GameDontDoChallengeHandle {
             .name("不可以！").describe("不能放置所有方块");
     //禁止放置所有方块
     public static GameDontDoChallenge DON_TOOL_MINING = new GameDontDoChallenge("DON_TOOL_MINING")
-            .name("有力无气症").describe("不能使用工具挖掘方块");
+            .name("有力无气症").describe("不能使用工具挖掘方块").weight(8f);
     //禁止使用工具挖掘方块
     public static GameDontDoChallenge DON_NEAR_ATTACKING = new GameDontDoChallenge("DON_NEAR_ATTACKING")
             .name("二极管").describe("周围不能有玩家在攻击生物");
@@ -164,7 +164,7 @@ public class GameDontDoChallengeHandle {
             .name("恐人症").describe("5*5范围内不能有其他玩家");
     //禁止5*5范围内有其他玩家
     public static GameDontDoChallenge DON_HIGH_YACGF = new GameDontDoChallenge("DON_HIGH_YACGF")
-            .name("绿色恐惧").describe("不能站在草地上");
+            .name("绿色恐惧").describe("不能站在草地上").weight(8f);
     //禁止站在草地上
     public static GameDontDoChallenge DON_HIGH_HHHHHHH = new GameDontDoChallenge("DON_HIGH_HHHHHHH")
             .name("贪生怕死").describe("周围不能有非友善生物");
@@ -173,6 +173,6 @@ public class GameDontDoChallengeHandle {
             .name("贪死贪生").describe("不能有一定幅度的血量变动");
     //禁止有血量变动
     public static GameDontDoChallenge DON_HIGH_CCCCCCCCCC = new GameDontDoChallenge("DON_HIGH_CCCCCCCCCC")
-            .name("w~co！").describe("不能使用左键与右键");
+            .name("w~co！").describe("不能使用左键与右键").weight(2f);
     //禁止左键与右键
 }
